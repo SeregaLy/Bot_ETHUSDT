@@ -6,6 +6,7 @@ from binance.client import Client
 
 client = Client()
 
+
 def get_price(symbol: str) -> float:
     """Функция для получения текущей цены валюты"""
     url = 'https://api.binance.com/api/v3/ticker/price'
@@ -13,6 +14,7 @@ def get_price(symbol: str) -> float:
     response = requests.get(url, params=params)
     data = response.json()
     return float(data['price'])
+
 
 def get_eth_btc_influence(symbol1, symbol2, window) -> float:
     """Функция для получения коэффициента влияния цены BTCUSDT на цену ETHUSDT"""
@@ -50,7 +52,8 @@ def get_eth_btc_influence(symbol1, symbol2, window) -> float:
     return corr
 
 
-def calculate_eth_price(exclude_btc_influence: float, symbol1, symbol2, window) -> float:
+def calculate_eth_price(exclude_btc_influence: float, symbol1, symbol2,
+                        window) -> float:
     """Функция для расчета цены ETHUSDT, исключив его движения, вызванные влиянием цены BTCUSDT"""
     eth_price = get_price('ETHUSDT')
     btc_price = get_price('BTCUSDT')
@@ -61,14 +64,18 @@ def calculate_eth_price(exclude_btc_influence: float, symbol1, symbol2, window) 
 
 def monitor_price_change() -> None:
     """Функция для отслеживания изменения цены ETHUSDT и вывода сообщения в консоль"""
-    exclude_btc_influence = 0 # Влияние на коэффициент влияния цены BTCUSDT на цену ETHUSDT
+    exclude_btc_influence = 0  # Влияние на коэффициент влияния цены BTCUSDT на цену ETHUSDT
     while True:
-        eth_price = calculate_eth_price(exclude_btc_influence, 'ETHUSDT', 'BTCUSDT', 600) # Время выборки из которого исключаем влияние на коэффициент влияния цены BTCUSDT на цену ETHUSDT
+        eth_price = calculate_eth_price(exclude_btc_influence, 'ETHUSDT',
+                                        'BTCUSDT',
+                                        600)  # Время выборки из которого исключаем влияние на коэффициент влияния цены BTCUSDT на цену ETHUSDT
         time.sleep(600)  # определяем время ожидания изменения цены
-        eth_price_last_hour = calculate_eth_price(exclude_btc_influence, 'ETHUSDT', 'BTCUSDT', 600)
+        eth_price_last_hour = calculate_eth_price(exclude_btc_influence,
+                                                  'ETHUSDT', 'BTCUSDT', 600)
         eth_price_change = (eth_price_last_hour / eth_price) - 1
         if abs(eth_price_change) >= 0.001:
-            print(f'Изменение цены в прошлом часовом промежутке: {eth_price_change * 100:.2f}%')
+            print(
+                f'Изменение цены в прошлом часовом промежутке: {eth_price_change * 100:.2f}%')
         exclude_btc_influence = eth_price_change
 
 

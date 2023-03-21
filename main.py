@@ -18,38 +18,39 @@ def get_price(symbol: str) -> float:
 
 def get_eth_btc_influence(symbol1, symbol2, window) -> float:
     """Функция для получения коэффициента влияния цены BTCUSDT на цену ETHUSDT"""
-    prices1 = client.futures_klines(symbol=symbol1,
-                                    interval=Client.KLINE_INTERVAL_1MINUTE,
-                                    limit=window)
-    prices2 = client.futures_klines(symbol=symbol2,
-                                    interval=Client.KLINE_INTERVAL_1MINUTE,
-                                    limit=window)
+    btc_url = 'https://api.binance.com/api/v3/klines'
+    btc_params = {'symbol': 'BTCUSDT', 'interval': '1h', 'limit': 500}
+    btc_response = requests.get(btc_url, params=btc_params)
+    btc_data = btc_response.json()
 
-    # Создаем временные ряды из цен
-    df1 = pd.DataFrame(prices1,
-                       columns=['time', 'open', 'high', 'low', 'close',
-                                'volume', 'close_time', 'quote_asset_volume',
-                                'number_of_trades',
-                                'taker_buy_base_asset_volume',
-                                'taker_buy_quote_asset_volume', 'ignore'])
-    df2 = pd.DataFrame(prices2,
-                       columns=['time', 'open', 'high', 'low', 'close',
-                                'volume', 'close_time', 'quote_asset_volume',
-                                'number_of_trades',
-                                'taker_buy_base_asset_volume',
-                                'taker_buy_quote_asset_volume', 'ignore'])
+    eth_url = 'https://api.binance.com/api/v3/klines'
+    eth_params = {'symbol': 'ETHUSDT', 'interval': '1h', 'limit': 500}
+    eth_response = requests.get(eth_url, params=eth_params)
+    eth_data = eth_response.json()
 
-    # Преобразуем цены в числовой формат и устанавливаем время как индекс
-    df1['close'] = pd.to_numeric(df1['close'])
-    df2['close'] = pd.to_numeric(df2['close'])
-    df1['time'] = pd.to_datetime(df1['time'], unit='ms')
-    df2['time'] = pd.to_datetime(df2['time'], unit='ms')
-    df1.set_index('time', inplace=True)
-    df2.set_index('time', inplace=True)
+    btc_df = pd.DataFrame(btc_data,
+                          columns=['Open time', 'Open', 'High', 'Low', 'Close',
+                                   'Volume', 'Close time',
+                                   'Quote asset volume', 'Number of trades',
+                                   'Taker buy base asset volume',
+                                   'Taker buy quote asset volume', 'Ignore'])
+    btc_df['Open time'] = pd.to_datetime(btc_df['Open time'], unit='ms')
+    btc_df['Close'] = btc_df['Close'].astype(float)
 
-    # Вычисляем корреляцию между временными рядами
-    corr = df1['close'].corr(df2['close'])
-    return corr
+    eth_df = pd.DataFrame(eth_data,
+                          columns=['Open time', 'Open', 'High', 'Low', 'Close',
+                                   'Volume', 'Close time',
+                                   'Quote asset volume', 'Number of trades',
+                                   'Taker buy base asset volume',
+                                   'Taker buy quote asset volume', 'Ignore'])
+    eth_df['Open time'] = pd.to_datetime(eth_df['Open time'], unit='ms')
+    eth_df['Close'] = eth_df['Close'].astype(float)
+
+    df = pd.merge(btc_df[['Open time', 'Close']],
+                  eth_df[['Open time', 'Close']], on='Open time')
+    corr = df['Close_x'].corr(df['Close_y'])
+
+    return corr * 3
 
 
 def calculate_eth_price(exclude_btc_influence: float, symbol1, symbol2,
